@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bokning – Podstudior och Oceanen</title>
+<style>
+:root{--bg:#f5f5f4;--panel:#ffffff;--line:#ddd6d3;--text:#1f2937;--muted:#6b7280;--soft:#fafaf9;--blue:#dbeafe;--green:#dcfce7;--yellow:#fef3c7;--rose:#ffe4e6;--purple:#ede9fe;--teal:#ccfbf1}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}.app{max-width:1380px;margin:0 auto;padding:24px}
+button{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:12px;padding:14px 18px;font-size:1rem;cursor:pointer}button:hover{background:var(--soft)}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--text)}textarea{min-height:90px;resize:vertical}.screen{display:none}.screen.active{display:block}
+.home{min-height:80vh;display:flex;flex-direction:column;justify-content:center}.logo{width:420px;max-width:90%;display:block;margin:0 auto 38px auto}.home-buttons{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}.home-buttons button{min-width:280px;font-size:1.15rem;padding:20px 24px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}.topbar-left,.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.header-block{margin-bottom:12px}.header-block h1{margin:0 0 6px 0;font-size:1.8rem;font-weight:600}.subheading{color:var(--muted);font-size:.98rem}
+.info-panel{display:none;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px;color:var(--muted);line-height:1.5}.info-panel.active{display:block}
+.board{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}.board-header{display:grid;background:var(--soft);border-bottom:1px solid var(--line)}.board-header.cols-3{grid-template-columns:90px repeat(3,1fr)}.board-header.cols-2{grid-template-columns:90px repeat(2,1fr)}.board-header div{padding:16px 14px;border-right:1px solid var(--line);font-weight:600}.board-header div:first-child{color:var(--muted)}
+.board-body{position:relative;max-height:860px;overflow:auto}.grid-row{display:grid;min-height:44px}.grid-row.cols-3{grid-template-columns:90px repeat(3,1fr)}.grid-row.cols-2{grid-template-columns:90px repeat(2,1fr)}.timecell,.slotcell{border-right:1px solid #ecebea;border-bottom:1px solid #ecebea}.timecell{background:var(--soft);color:var(--muted);font-size:.88rem;padding:10px 10px 0 12px;position:sticky;left:0;z-index:2}.slotcell{background:#fff;cursor:pointer}.slotcell:hover{background:#fcfcfb}
+.booking{position:absolute;border:1px solid rgba(31,41,55,0.12);border-radius:12px;padding:10px;cursor:pointer;font-size:.9rem;overflow:hidden}.booking strong{display:block;margin-bottom:4px}
+.color-1{background:var(--blue)}.color-2{background:var(--green)}.color-3{background:var(--yellow)}.color-4{background:var(--rose)}.color-5{background:var(--purple)}.color-6{background:var(--teal)}
+.week-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}.day-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer}.day-card:hover{background:var(--soft)}.day-card.active{outline:2px solid #cfc8c4}.day-card .bars{display:flex;gap:6px;margin-top:10px}.bar{height:8px;border-radius:999px;background:#e7e5e4;flex:1}.bar.full{background:#d6d3d1}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:center;justify-content:center;padding:20px}.modal-backdrop.active{display:flex}.modal{width:100%;max-width:560px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}.modal-header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.full{grid-column:1/-1}.modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.error-box{display:none;margin-top:12px;padding:12px;border:1px solid #e7c9c9;border-radius:10px;background:#fff7f7;color:#8a3131}.error-box.active{display:block}.loading{margin-bottom:10px;color:var(--muted)}
+@media (max-width:900px){.board-header.cols-3,.grid-row.cols-3{grid-template-columns:72px repeat(3,minmax(220px,1fr))}.board-header.cols-2,.grid-row.cols-2{grid-template-columns:72px repeat(2,minmax(220px,1fr))}.board-body{overflow:auto}}
+@media (max-width:700px){.form-grid,.week-strip{grid-template-columns:1fr}.home-buttons{flex-direction:column;align-items:center}.home-buttons button{width:100%;max-width:360px}}
+</style>
+</head>
+<body>
+<div class="app">
+<section id="home" class="screen active"><div class="home"><img class="logo" src="https://cdn.prod.website-files.com/63e24702f042c50ffc91818b/646239316cf71bde35bcc2b4_grunden-DV-logo%20copy.png" alt="Logga"><div class="home-buttons"><button onclick="openBookingArea('pod')">Podstudior</button><button onclick="openBookingArea('ocean')">Oceanen / Filmrum</button></div></div></section>
+<section id="day-view" class="screen">
+<div class="topbar"><div class="topbar-left"><button onclick="showScreen('home')">Startsida</button><button onclick="openBookingArea('pod')">Podstudior</button><button onclick="openBookingArea('ocean')">Oceanen / Filmrum</button></div><div class="topbar-right"><button onclick="changeDay(-1)">Föregående dag</button><button onclick="goToday()">Dagens datum</button><button onclick="changeDay(1)">Nästa dag</button><input type="date" id="datePicker" style="width:auto;min-width:170px" onchange="onDateChange()"><button onclick="toggleInfo()">Info</button></div></div>
+<div class="header-block"><h1 id="currentDateLabel"></h1><div class="subheading" id="areaTitle"></div></div>
+<div id="infoPanel" class="info-panel">Klicka i en ledig ruta för att skapa en bokning. Klicka på en bokad tid för att ändra eller radera den. Bokningar får inte överlappa varandra i samma rum. Kryssa i om bokningen ska återkomma varje vecka.</div>
+<div class="loading" id="loadingText"></div>
+<div class="board"><div class="board-header cols-3" id="boardHeader"></div><div class="board-body" id="boardBody"></div></div>
+<div class="week-strip" id="weekStrip"></div>
+</section></div>
+
+<div class="modal-backdrop" id="bookingModal"><div class="modal"><div class="modal-header"><h3 id="modalTitle">Ny bokning</h3><button onclick="closeModal()">Stäng</button></div>
+<div class="form-grid">
+<div class="field full"><label>Rum</label><input id="modalRoom" readonly></div>
+<div class="field"><label>Datum</label><input id="modalDate" type="date"></div>
+<div class="field"><label>Namn</label><input id="modalName" type="text"></div>
+<div class="field"><label>Start</label><select id="modalStart"></select></div>
+<div class="field"><label>Slut</label><select id="modalEnd"></select></div>
+<div class="field"><label>Färg</label><select id="modalColor"><option value="color-1">Blå</option><option value="color-2">Grön</option><option value="color-3">Gul</option><option value="color-4">Rosa</option><option value="color-5">Lila</option><option value="color-6">Turkos</option></select></div>
+<div class="field full"><label><input type="checkbox" id="modalRecurring" style="width:auto;margin-right:8px">Återkommande varje vecka</label></div>
+<div class="field full"><label>Meddelande</label><textarea id="modalMessage"></textarea></div>
+</div>
+<div class="modal-actions"><button id="saveBtn" onclick="saveBooking()">Spara</button><button id="deleteBtn" onclick="deleteBooking()">Radera bokning</button></div>
+<div id="statusBox" class="error-box" style="display:none;background:#eef6ff;color:#123;padding:10px;border:1px solid #cfe3ff;"></div>
+<div id="errorBox" class="error-box"></div></div></div>
+
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbz7vYgvsJfQy9YYCLsDZilWMmMfEYUwplg9VyDVfVcLTeen-Xy1oxZkEJHQkgDWccP7zw/exec";
+const AREAS = {
+  pod: { title: "Podstudior", studios: ["Lilla studion", "Stora studion", "Glasburen"] },
+  ocean: { title: "Oceanen / Filmrum", studios: ["Oceanen", "Filmrum"] }
+};
+const monthNames = ["januari","februari","mars","april","maj","juni","juli","augusti","september","oktober","november","december"];
+
+let currentArea = "pod";
+let currentDate = new Date();
+currentDate.setHours(12, 0, 0, 0);
+
+let selectedBookingId = null;
+let modalMode = "new";
+let currentBookings = [];
+const bookingCache = new Map();
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function openBookingArea(areaKey) {
+  currentArea = areaKey;
+  showScreen("day-view");
+  renderBoard();
+}
+
+function toggleInfo() {
+  document.getElementById("infoPanel").classList.toggle("active");
+}
+
+function dateToISO(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatDateLabel(date) {
+  return `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function addDays(date, days) {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
+function getWeekdayMondayIndex(date) {
+  const day = date.getDay();
+  return day === 0 ? 6 : day - 1;
+}
+
+function getMonday(date) {
+  return addDays(date, -getWeekdayMondayIndex(date));
+}
+
+function changeDay(step) {
+  currentDate = addDays(currentDate, step);
+  renderBoard();
+}
+
+function goToday() {
+  currentDate = new Date();
+  currentDate.setHours(12, 0, 0, 0);
+  renderBoard();
+}
+
+function onDateChange() {
+  const value = document.getElementById("datePicker").value;
+  if (!value) return;
+  currentDate = new Date(value + "T12:00:00");
+  renderBoard();
+}
+
+function generateTimeOptions(selectId) {
+  const select = document.getElementById(selectId);
+  select.innerHTML = "";
+  for (let m = 8 * 60; m <= 17 * 60; m += 15) {
+    const h = String(Math.floor(m / 60)).padStart(2, "0");
+    const min = String(m % 60).padStart(2, "0");
+    const t = `${h}:${min}`;
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    select.appendChild(opt);
+  }
+}
+
+function setupSelects() {
+  generateTimeOptions("modalStart");
+  generateTimeOptions("modalEnd");
+}
+
+function timeToMinutes(t) {
+  const [h, m] = String(t || "").split(":").map(Number);
+  return h * 60 + m;
+}
+
+function snapToQuarter(minutes) {
+  return Math.round(minutes / 15) * 15;
+}
+
+function minutesToTime(minutes) {
+  const h = String(Math.floor(minutes / 60)).padStart(2, "0");
+  const m = String(minutes % 60).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function currentRooms() {
+  return AREAS[currentArea].studios;
+}
+
+function cacheKey(area, date) {
+  return `${area}__${date}`;
+}
+
+function cloneBooking(b) {
+  return { ...b };
+}
+
+function cloneBookings(bookings) {
+  return (bookings || []).map(cloneBooking);
+}
+
+function setCachedBookings(area, date, bookings) {
+  bookingCache.set(cacheKey(area, date), cloneBookings(bookings));
+}
+
+function getCachedBookings(area, date) {
+  const hit = bookingCache.get(cacheKey(area, date));
+  return hit ? cloneBookings(hit) : null;
+}
+
+function invalidateCachedBookings(area, date) {
+  bookingCache.delete(cacheKey(area, date));
+}
+
+function normalizeBooking(booking) {
+  return {
+    id: String(booking.id || "").trim(),
+    area: String(booking.area || "").trim(),
+    room: String(booking.room || "").trim(),
+    start_date: String(booking.start_date || "").trim(),
+    start_time: String(booking.start_time || "").trim(),
+    end_time: String(booking.end_time || "").trim(),
+    name: String(booking.name || "").trim(),
+    message: String(booking.message || "").trim(),
+    color: String(booking.color || "color-1").trim(),
+    recurrence: String(booking.recurrence || "none").trim()
+  };
+}
+
+function sortBookings(list) {
+  list.sort((a, b) => {
+    const timeDiff = timeToMinutes(a.start_time) - timeToMinutes(b.start_time);
+    if (timeDiff !== 0) return timeDiff;
+    return a.room.localeCompare(b.room, "sv");
+  });
+  return list;
+}
+
+function upsertBookingInList(list, booking) {
+  const normalized = normalizeBooking(booking);
+  const index = list.findIndex(b => String(b.id) === String(normalized.id));
+  if (index >= 0) {
+    list[index] = normalized;
+  } else {
+    list.push(normalized);
+  }
+  return sortBookings(list);
+}
+
+function removeBookingFromList(list, bookingId) {
+  const index = list.findIndex(b => String(b.id) === String(bookingId));
+  if (index >= 0) list.splice(index, 1);
+  return list;
+}
+
+async function apiGetBookings(area, date, force = false) {
+  if (!force) {
+    const cached = getCachedBookings(area, date);
+    if (cached) return { ok: true, bookings: cached, cached: true };
+  }
+
+  const url = `${API_URL}?action=getBookings&area=${encodeURIComponent(area)}&date=${encodeURIComponent(date)}`;
+  const res = await fetch(url, { cache: "no-store" });
+  const data = await res.json();
+
+  if (data.ok) {
+    setCachedBookings(area, date, data.bookings || []);
+  }
+
+  return data;
+}
+
+async function apiPost(payload) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  });
+  return await res.json();
+}
+
+function renderHeader() {
+  const rooms = currentRooms();
+  const header = document.getElementById("boardHeader");
+  header.className = "board-header " + (rooms.length === 3 ? "cols-3" : "cols-2");
+  header.innerHTML = "<div>Tid</div>" + rooms.map(s => `<div>${s}</div>`).join("");
+  document.getElementById("areaTitle").textContent = AREAS[currentArea].title;
+}
+
+function renderWeekStrip() {
+  const strip = document.getElementById("weekStrip");
+  strip.innerHTML = "";
+  const monday = getMonday(currentDate);
+  const fragment = document.createDocumentFragment();
+
+  for (let i = 0; i < 5; i++) {
+    const date = addDays(monday, i);
+    const iso = dateToISO(date);
+    const card = document.createElement("div");
+    card.className = "day-card";
+    if (iso === dateToISO(currentDate)) card.classList.add("active");
+    card.onclick = () => {
+      currentDate = new Date(iso + "T12:00:00");
+      renderBoard();
+    };
+
+    const title = document.createElement("strong");
+    title.textContent = String(date.getDate());
+
+    const meta = document.createElement("div");
+    meta.className = "subheading";
+    meta.textContent = monthNames[date.getMonth()];
+
+    card.appendChild(title);
+    card.appendChild(meta);
+    fragment.appendChild(card);
+  }
+
+  strip.appendChild(fragment);
+}
+
+function drawBoard() {
+  const iso = dateToISO(currentDate);
+  const rooms = currentRooms();
+
+  renderHeader();
+  document.getElementById("currentDateLabel").textContent = formatDateLabel(currentDate);
+  document.getElementById("datePicker").value = iso;
+
+  const body = document.getElementById("boardBody");
+  body.innerHTML = "";
+
+  const rowClass = "grid-row " + (rooms.length === 3 ? "cols-3" : "cols-2");
+  const fragment = document.createDocumentFragment();
+
+  for (let m = 8 * 60; m < 17 * 60; m += 15) {
+    const row = document.createElement("div");
+    row.className = rowClass;
+
+    const time = document.createElement("div");
+    time.className = "timecell";
+    if (m % 60 === 0) {
+      time.textContent = `${String(Math.floor(m / 60)).padStart(2, "0")}:00`;
+    }
+    row.appendChild(time);
+
+    rooms.forEach(room => {
+      const cell = document.createElement("div");
+      cell.className = "slotcell";
+      cell.onclick = () => openNewBooking(room, m);
+      row.appendChild(cell);
+    });
+
+    fragment.appendChild(row);
+  }
+
+  body.appendChild(fragment);
+
+  const bodyHeight = body.scrollHeight;
+  const totalMinutes = (17 - 8) * 60;
+  const colWidth = (body.clientWidth - 90) / rooms.length;
+
+  currentBookings.forEach(b => {
+    const roomIndex = rooms.indexOf(b.room);
+    if (roomIndex < 0) return;
+
+    const startOffset = timeToMinutes(b.start_time) - 8 * 60;
+    const duration = timeToMinutes(b.end_time) - timeToMinutes(b.start_time);
+
+    const el = document.createElement("div");
+    el.className = `booking ${b.color || "color-1"}`;
+    el.style.top = `${(startOffset / totalMinutes) * bodyHeight}px`;
+    el.style.height = `${Math.max((duration / totalMinutes) * bodyHeight - 4, 36)}px`;
+    el.style.left = `${90 + roomIndex * colWidth + 8}px`;
+    el.style.width = `${colWidth - 16}px`;
+    el.innerHTML = `<strong>${b.start_time}–${b.end_time}</strong>${b.name}${b.recurrence === "weekly" ? "<br>Återkommande" : ""}`;
+    el.onclick = () => openExistingBooking(b.id);
+    body.appendChild(el);
+  });
+
+  renderWeekStrip();
+}
+
+async function renderBoard(force = false) {
+  const iso = dateToISO(currentDate);
+  const loading = document.getElementById("loadingText");
+
+  renderHeader();
+  document.getElementById("currentDateLabel").textContent = formatDateLabel(currentDate);
+  document.getElementById("datePicker").value = iso;
+
+  const cached = !force ? getCachedBookings(currentArea, iso) : null;
+  if (cached) {
+    currentBookings = sortBookings(cached);
+    loading.textContent = "";
+    drawBoard();
+    return;
+  }
+
+  loading.textContent = "Laddar bokningar...";
+  try {
+    const apiData = await apiGetBookings(currentArea, iso, true);
+    if (!apiData.ok) {
+      loading.textContent = apiData.error || "Kunde inte läsa bokningar.";
+      currentBookings = [];
+      drawBoard();
+      return;
+    }
+    currentBookings = sortBookings(apiData.bookings || []);
+    loading.textContent = "";
+    drawBoard();
+  } catch (err) {
+    currentBookings = [];
+    loading.textContent = "Kunde inte läsa bokningar.";
+    drawBoard();
+  }
+}
+
+function openNewBooking(room, startMinutes) {
+  modalMode = "new";
+  selectedBookingId = null;
+  clearError();
+  hideStatus();
+  setModalBusy(false);
+
+  const snapped = Math.max(8 * 60, Math.min(16 * 60 + 45, snapToQuarter(startMinutes)));
+  const end = Math.min(snapped + 60, 17 * 60);
+
+  document.getElementById("modalTitle").textContent = "Ny bokning";
+  document.getElementById("deleteBtn").style.display = "none";
+  document.getElementById("modalRoom").value = room;
+  document.getElementById("modalDate").value = dateToISO(currentDate);
+  document.getElementById("modalName").value = "";
+  document.getElementById("modalStart").value = minutesToTime(snapped);
+  document.getElementById("modalEnd").value = minutesToTime(end);
+  document.getElementById("modalMessage").value = "";
+  document.getElementById("modalRecurring").checked = false;
+  document.getElementById("modalColor").value = "color-1";
+  openModal();
+}
+
+function openExistingBooking(id) {
+  modalMode = "edit";
+  selectedBookingId = id;
+  clearError();
+  hideStatus();
+  setModalBusy(false);
+
+  const booking = currentBookings.find(b => String(b.id) === String(id));
+  if (!booking) return;
+
+  document.getElementById("modalTitle").textContent = "Ändra bokning";
+  document.getElementById("deleteBtn").style.display = "inline-block";
+  document.getElementById("modalRoom").value = booking.room;
+  document.getElementById("modalDate").value = booking.start_date;
+  document.getElementById("modalName").value = booking.name;
+  document.getElementById("modalStart").value = booking.start_time;
+  document.getElementById("modalEnd").value = booking.end_time;
+  document.getElementById("modalMessage").value = booking.message || "";
+  document.getElementById("modalRecurring").checked = booking.recurrence === "weekly";
+  document.getElementById("modalColor").value = booking.color || "color-1";
+  openModal();
+}
+
+function openModal() {
+  document.getElementById("bookingModal").classList.add("active");
+}
+
+function closeModal() {
+  document.getElementById("bookingModal").classList.remove("active");
+  clearError();
+  hideStatus();
+  setModalBusy(false);
+}
+
+function showError(message) {
+  const box = document.getElementById("errorBox");
+  box.textContent = message;
+  box.classList.add("active");
+}
+
+function clearError() {
+  const box = document.getElementById("errorBox");
+  box.textContent = "";
+  box.classList.remove("active");
+}
+
+function showStatus(message) {
+  const box = document.getElementById("statusBox");
+  if (!box) return;
+  box.textContent = message;
+  box.style.display = "block";
+}
+
+function hideStatus() {
+  const box = document.getElementById("statusBox");
+  if (!box) return;
+  box.style.display = "none";
+  box.textContent = "";
+}
+
+function setModalBusy(isBusy) {
+  const saveBtn = document.getElementById("saveBtn");
+  const deleteBtn = document.getElementById("deleteBtn");
+  if (saveBtn) saveBtn.disabled = isBusy;
+  if (deleteBtn) deleteBtn.disabled = isBusy;
+}
+
+function syncCurrentViewCache() {
+  setCachedBookings(currentArea, dateToISO(currentDate), currentBookings);
+  drawBoard();
+}
+
+async function saveBooking() {
+  clearError();
+  hideStatus();
+  setModalBusy(true);
+  showStatus("Sparar bokning...");
+
+  const payload = {
+    action: modalMode === "new" ? "createBooking" : "updateBooking",
+    id: selectedBookingId,
+    area: currentArea,
+    room: document.getElementById("modalRoom").value,
+    start_date: document.getElementById("modalDate").value,
+    recurrence: document.getElementById("modalRecurring").checked ? "weekly" : "none",
+    start_time: document.getElementById("modalStart").value,
+    end_time: document.getElementById("modalEnd").value,
+    name: document.getElementById("modalName").value,
+    message: document.getElementById("modalMessage").value,
+    color: document.getElementById("modalColor").value
+  };
+
+  const currentIso = dateToISO(currentDate);
+
+  try {
+    const result = await apiPost(payload);
+    if (!result.ok) {
+      hideStatus();
+      showError(result.error || "Något gick fel.");
+      setModalBusy(false);
+      return;
+    }
+
+    const savedBooking = normalizeBooking(result.booking || { ...payload, id: result.id });
+    if (result.previous) {
+      invalidateCachedBookings(result.previous.area, result.previous.start_date);
+      if (result.previous.area === currentArea && result.previous.start_date === currentIso) {
+        removeBookingFromList(currentBookings, savedBooking.id);
+      }
+    }
+
+    invalidateCachedBookings(savedBooking.area, savedBooking.start_date);
+
+    closeModal();
+
+    if (savedBooking.area === currentArea && savedBooking.start_date === currentIso) {
+      upsertBookingInList(currentBookings, savedBooking);
+      syncCurrentViewCache();
+      return;
+    }
+
+    currentArea = savedBooking.area || currentArea;
+    currentDate = new Date(savedBooking.start_date + "T12:00:00");
+    await renderBoard(true);
+  } catch (err) {
+    hideStatus();
+    showError("Kunde inte spara.");
+    setModalBusy(false);
+  }
+}
+
+async function deleteBooking() {
+  if (selectedBookingId == null) return;
+
+  clearError();
+  hideStatus();
+  setModalBusy(true);
+  showStatus("Raderar bokning...");
+
+  const currentIso = dateToISO(currentDate);
+
+  try {
+    const result = await apiPost({ action: "deleteBooking", id: selectedBookingId });
+    if (!result.ok) {
+      hideStatus();
+      showError(result.error || "Kunde inte radera.");
+      setModalBusy(false);
+      return;
+    }
+
+    const deleted = normalizeBooking(result.deleted || { id: selectedBookingId });
+    invalidateCachedBookings(deleted.area || currentArea, deleted.start_date || currentIso);
+
+    closeModal();
+
+    if ((deleted.area || currentArea) === currentArea && (deleted.start_date || currentIso) === currentIso) {
+      removeBookingFromList(currentBookings, deleted.id);
+      syncCurrentViewCache();
+      return;
+    }
+
+    await renderBoard(true);
+  } catch (err) {
+    hideStatus();
+    showError("Kunde inte radera.");
+    setModalBusy(false);
+  }
+}
+
+setupSelects();
+</script>
+
+</body>
+</html>
